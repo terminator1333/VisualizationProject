@@ -3,11 +3,11 @@ import streamlit as st
 import plotly.express as px
 import numpy as np
 import plotly.graph_objects as go
-PATH_GEOJSON = r"C:\Users\user\Downloads\israel_map.geojson"
+
 import json
 import matplotlib
 import matplotlib.cm as cm
-matplotlib.use('Agg') # <--- THIS LINE IS CRITICAL FOR COLAB
+matplotlib.use('Agg') # to not open new window when using matplotlib
 import matplotlib.colors as mcolors
 import colorsys # Required for shading
 
@@ -20,20 +20,19 @@ st.set_page_config(page_title="Israel Data Dashboard", page_icon="🇮🇱", lay
 # Navigation
 # -------------------------
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["מגמות עלייה ממדינות מוצא", "מגמות קליטה לפי יישובים", "תחומי תעסוקה של עולים לפי מדינת מוצא"])
+page = st.sidebar.radio("Go to", ["מגמות עלייה ממדינות מוצא", "מגמות קליטה לפי יישובים", "תחומי תעסוקה של עולים לפי מדינת מוצא"]) #all the pages
 
 # -------------------------
 # Configuration
 # -------------------------
-PATH_OLIM = r"C:\Users\user\Downloads\olim_2015-2024_preprocessed.csv"
-PATH_GDP = r"C:\Users\user\Downloads\gdp.csv"
-PATH_CITIES = r"C:\Users\user\Downloads\israeli_cities.csv"
-PATH_OLIM_AGGREGATED = r"C:\Users\user\Downloads\olim_aggregated.csv"
 
+PATH_GEOJSON = r"C:\Users\user\Downloads\israel_map.geojson"
 
 PAGE1_PATH = r"C:\Users\user\Downloads\page1_final.csv"
 
 PAGE2_PATH = r"C:\Users\user\Downloads\page2_final.csv"
+
+PAGE3_PATH = r"C:\Users\user\Downloads\page3_final.csv"
 
 # ==============================================================================
 # PAGE 1: IMMIGRATION TRENDS
@@ -49,7 +48,6 @@ if page == "מגמות עלייה ממדינות מוצא":
 
     @st.cache_data(show_spinner=False)
     def load_and_process_data(PAGE1_PATH):
-        # --- LOAD IMMIGRATION DATA (Now Aggregated) ---
         try:
             # We explicitly tell pandas to parse 'date' as dates
             df = pd.read_csv(PAGE1_PATH, parse_dates=["date"])
@@ -61,8 +59,7 @@ if page == "מגמות עלייה ממדינות מוצא":
         except Exception as e:
             return None, None, None, f"Error loading Aggregated Immigration data: {e}"
 
-        
-    # Use the aggregated path variable you defined earlier
+
     df_merged, hebrew_to_english, error = load_and_process_data(PAGE1_PATH)
 
     if error:
@@ -219,7 +216,6 @@ if page == "מגמות עלייה ממדינות מוצא":
     country_continent_map = base_filtered.groupby("erez_moza")["continent"].first()
     grid["continent"] = grid["erez_moza"].map(country_continent_map)
 
-    # Important: Drop rows where GDP is missing (if any), similar to your original logic
     grid = grid.dropna(subset=["gdp"])
 
     if grid.empty:
@@ -328,7 +324,7 @@ elif page == "מגמות קליטה לפי יישובים":
       st.session_state.previous_draw_order = []
 
   # --- MAP VIEW STATE ---
-  # Default start view (South-ish, matched to your preference)
+  # Default start view
   if 'map_view' not in st.session_state:
       st.session_state.map_view = {"lat": 31.6, "lon": 34.85, "zoom": 7.3}
 
@@ -442,7 +438,7 @@ elif page == "מגמות קליטה לפי יישובים":
       st.write(""); st.write("")
       st.button("🔄 איפוס", use_container_width=True, on_click=on_reset_click)
   with c_ctrl3:
-      st.info("💡 **אינטראקציה:** ניתן ללחוץ על קו בגרף או אזור במפה כדי לבחור עיר.")
+      st.info("לחצו על אחד מהכפתורים מטה כדי לכוון את המפה לאזור מסוים")
 
   current_selection = st.session_state.selected_cities
   is_all_mode = (len(current_selection) == 0)
@@ -650,24 +646,17 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
     def load_sankey_data(path):
         df = pd.read_csv(path)
         
-        # Aggregation / Mapping
-        mapping = {
-            'מדעים מדויקים': 'טכנולוגיה והנדסה',
-            'מקצועות המחשב': 'טכנולוגיה והנדסה', 
-            'חקלאות ובעלי חיים': 'מדעי החיים'
-        }
-        df['subject'] = df['subject'].replace(mapping)
-        
-        # Exclusions
-        exclusions = ["בלטי מקצועי", "בלתי מקצועי", "לא עבד", "לא צויין", "עצמאי", "מדעי החיים"]
-        df_clean = df[~df['subject'].isin(exclusions)]
-        return df_clean
+        return df
 
-    df_sankey = load_sankey_data(PATH_OLIM) 
+    df_sankey = load_sankey_data(PAGE3_PATH) 
 
     # 2. Controls - Country Selection
-    top_4_countries = df_sankey['erez_moza'].value_counts().nlargest(4).index.tolist()
+    country_totals = df_sankey.groupby('erez_moza')['count'].sum()
+
+    top_4_countries = country_totals.nlargest(4).index.tolist()
     all_countries_available = df_sankey['erez_moza'].unique().tolist()
+
+    
     sorted_options = top_4_countries + [c for c in all_countries_available if c not in top_4_countries]
 
     selected_countries = st.multiselect(
@@ -681,10 +670,13 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
         st.stop()
 
     # 3. Filter Data
-    final_df = df_sankey[df_sankey['erez_moza'].isin(selected_countries)]
-
+    flows = df_sankey[df_sankey['erez_moza'].isin(selected_countries)].copy()
     # 4. Prepare Sankey Data
-    flows = final_df.groupby(['erez_moza', 'subject']).size().reset_index(name='count')
+    unique_countries = selected_countries
+
+    unique_subjects = flows['subject'].unique().tolist()
+
+    all_labels = unique_countries + unique_subjects
 
     # Create Indices
     # We use the selected countries list directly (Source)
@@ -694,7 +686,7 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
 
     all_labels = unique_countries + unique_subjects
     
-    # --- FORMATED LABELS (The "Halo" Trick) ---
+    # --- FORMATED LABELS
     # Instead of moving text, we use HTML to give it a background color.
     # This guarantees readability regardless of where Plotly places the node.
     styled_labels = []
