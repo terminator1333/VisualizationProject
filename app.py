@@ -30,8 +30,11 @@ PATH_GDP = r"C:\Users\user\Downloads\gdp.csv"
 PATH_CITIES = r"C:\Users\user\Downloads\israeli_cities.csv"
 PATH_OLIM_AGGREGATED = r"C:\Users\user\Downloads\olim_aggregated.csv"
 
+
+PAGE1_PATH = r"C:\Users\user\Downloads\page1_final.csv"
+
 # ==============================================================================
-# PAGE 1: IMMIGRATION TRENDS (Original)
+# PAGE 1: IMMIGRATION TRENDS
 # ==============================================================================
 if page == "מגמות עלייה ממדינות מוצא":
 
@@ -43,58 +46,22 @@ if page == "מגמות עלייה ממדינות מוצא":
         st.caption("")
 
     @st.cache_data(show_spinner=False)
-    def load_and_process_data(olim_path, gdp_path):
+    def load_and_process_data(PAGE1_PATH):
         # --- LOAD IMMIGRATION DATA (Now Aggregated) ---
         try:
             # We explicitly tell pandas to parse 'date' as dates
-            monthly_olim = pd.read_csv(olim_path, parse_dates=["date"])
+            df = pd.read_csv(PAGE1_PATH, parse_dates=["date"])
+            hebrew_to_english = {}
+            if "Country" in df.columns:
+                temp_map = df[["erez_moza", "Country"]].dropna().drop_duplicates(subset=["erez_moza"])
+                hebrew_to_english = temp_map.set_index("erez_moza")["Country"].to_dict()
+            return df, hebrew_to_english, None
         except Exception as e:
             return None, None, None, f"Error loading Aggregated Immigration data: {e}"
 
-        # --- LOAD GDP DATA (Stays mostly the same) ---
-        try:
-            df_gdp_raw = pd.read_csv(gdp_path)
-        except Exception as e:
-            return None, None, None, f"Error loading GDP data: {e}"
-
-        # [GDP Processing Logic remains exactly the same as your original code...]
-        if "erez_moza" in df_gdp_raw.columns:
-            df_gdp_raw = df_gdp_raw.dropna(subset=["erez_moza"])
-            df_gdp_raw["erez_moza"] = df_gdp_raw["erez_moza"].astype(str).str.strip()
-        else:
-            return None, None, None, "GDP data missing 'erez_moza' column."
-
-        hebrew_to_english = {}
-        if "Country" in df_gdp_raw.columns:
-            temp_map = df_gdp_raw[["erez_moza", "Country"]].dropna().drop_duplicates(subset=["erez_moza"])
-            hebrew_to_english = temp_map.set_index("erez_moza")["Country"].to_dict()
-
-        year_cols = [c for c in df_gdp_raw.columns if c.isdigit()]
-
-        gdp_melt = df_gdp_raw.melt(
-            id_vars=["erez_moza"],
-            value_vars=year_cols,
-            var_name="year",
-            value_name="gdp"
-        )
-        gdp_melt["year"] = pd.to_numeric(gdp_melt["year"])
-        gdp_melt["gdp"] = pd.to_numeric(gdp_melt["gdp"], errors='coerce')
-
-        gdp_melt["date"] = pd.to_datetime(gdp_melt["year"].astype(str) + "-01-01")
-        gdp_melt = gdp_melt.dropna(subset=["gdp", "date"])
-        gdp_melt = gdp_melt.sort_values(["erez_moza", "date"])
-
-        gdp_interp = (
-            gdp_melt.set_index("date")
-                .groupby("erez_moza")["gdp"]
-                .apply(lambda x: x.resample("MS").interpolate(method="linear"))
-                .reset_index()
-        )
-
-        return monthly_olim, gdp_interp, hebrew_to_english, None
-
+        
     # Use the aggregated path variable you defined earlier
-    monthly, gdp_data, hebrew_to_english, error = load_and_process_data(PATH_OLIM_AGGREGATED, PATH_GDP)
+    df_merged, hebrew_to_english, error = load_and_process_data(PAGE1_PATH)
 
     if error:
         st.error(error)
@@ -103,8 +70,8 @@ if page == "מגמות עלייה ממדינות מוצא":
     st.markdown("### Filters")
     c1, c2, c3 = st.columns([2, 2, 3])
 
-    min_date = monthly["date"].min()
-    max_date = monthly["date"].max()
+    min_date = df_merged["date"].min()
+    max_date = df_merged["date"].max()
 
     with c1:
         year_range = st.slider(
@@ -118,7 +85,7 @@ if page == "מגמות עלייה ממדינות מוצא":
         speed_ms = st.slider("Animation Speed (ms)", 50, 500, 100, step=10)
 
     with c3:
-        all_continents = sorted(monthly["continent"].unique())
+        all_continents = sorted(df_merged["continent"].unique())
         selected_continents = st.multiselect("Continents", all_continents, default=all_continents)
 
     timeline = pd.date_range(
@@ -127,9 +94,9 @@ if page == "מגמות עלייה ממדינות מוצא":
         freq="MS"
     )
 
-    base_filtered = monthly[
-        (monthly["date"].isin(timeline)) &
-        (monthly["continent"].isin(selected_continents))
+    base_filtered = df_merged[
+        (df_merged["date"].isin(timeline)) &
+        (df_merged["continent"].isin(selected_continents))
     ].copy()
 
     if base_filtered.empty:
@@ -242,12 +209,15 @@ if page == "מגמות עלייה ממדינות מוצא":
     ).to_frame(index=False)
 
     grid = grid.merge(base_final, on=["date", "erez_moza"], how="left")
+    
+    # Fill missing immigration counts with 0 (months with no immigrants)
     grid["monthly_count"] = grid["monthly_count"].fillna(0)
-
+    
+    # Map continent to ensure the grid has it (using the map created from base_filtered)
     country_continent_map = base_filtered.groupby("erez_moza")["continent"].first()
     grid["continent"] = grid["erez_moza"].map(country_continent_map)
 
-    grid = grid.merge(gdp_data, on=["date", "erez_moza"], how="left")
+    # Important: Drop rows where GDP is missing (if any), similar to your original logic
     grid = grid.dropna(subset=["gdp"])
 
     if grid.empty:
