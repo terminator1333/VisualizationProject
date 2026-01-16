@@ -58,7 +58,7 @@
 
 ```
 
-This is our visualization project!
+Visualization project, for university course
 
 
 A bit on each file: 
@@ -86,20 +86,13 @@ A bit on each file:
 
 In order to use:
 
-```
-Download all files in the datasets/ folder
-```
-
-```
-Download app.py
-```
-
-Have the following installations
+- Download all files in the datasets/ folder
+- Download app.py
+- Have the following installations
 ```
 pip install pandas streamlit plotly numpy matplotlib
 ```
-
-Run app.py
+- Run app.py
 
 
 
