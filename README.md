@@ -61,8 +61,7 @@
 Visualization project, for university course
 
 
-=============================================
-=============================================
+-------------------------------------
 
 A bit on each file: 
 
@@ -82,8 +81,7 @@ A bit on each file:
         isr_pop.ipynb -> for preprocessing populations of different yeshuvim (districts)
         visualization_preprocessing.ipynb -> initial preprocessing of raw immigration data
 
-=============================================
-=============================================
+-------------------------------------
 
 In order to use:
 
@@ -95,9 +93,7 @@ pip install pandas streamlit plotly numpy matplotlib
 ```
 - Run app.py
 
-
-=============================================
-=============================================
+-------------------------------------
 
 
 
