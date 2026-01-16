@@ -3,7 +3,7 @@ import streamlit as st
 import plotly.express as px
 import numpy as np
 import plotly.graph_objects as go
-PATH_GEOJSON = r"C:\Users\user\Downloads\fixed_israel_map.geojson"
+PATH_GEOJSON = r"C:\Users\user\Downloads\israel_map.geojson"
 import json
 import matplotlib
 import matplotlib.cm as cm
@@ -32,6 +32,8 @@ PATH_OLIM_AGGREGATED = r"C:\Users\user\Downloads\olim_aggregated.csv"
 
 
 PAGE1_PATH = r"C:\Users\user\Downloads\page1_final.csv"
+
+PAGE2_PATH = r"C:\Users\user\Downloads\page2_final.csv"
 
 # ==============================================================================
 # PAGE 1: IMMIGRATION TRENDS
@@ -373,7 +375,7 @@ elif page == "מגמות קליטה לפי יישובים":
   @st.cache_data
   def load_data():
       try:
-          df = pd.read_csv(r"C:\Users\user\Downloads\olim_aggregated_ready.csv")
+          df = pd.read_csv(PAGE2_PATH)
           unique_ids = df['english_id'].unique()
           aggregated_rows = []
           for eid in unique_ids:
@@ -406,7 +408,7 @@ elif page == "מגמות קליטה לפי יישובים":
 
   df_profile = load_data()
   try:
-      with open(r"C:\Users\user\Downloads\fixed_israel_map.geojson", "r", encoding="utf-8") as f:
+      with open(r"C:\Users\user\Downloads\israel_map.geojson", "r", encoding="utf-8") as f:
           cities_geojson = json.load(f)
   except:
       st.error("Missing map file.")
