@@ -67,19 +67,39 @@ A bit on each file:
     app.py -> the created .py script for running the streamlit service
 
     datasets/
-        page1_final.csv -> 
+        page1_final.csv -> the csv file needed for the 1st page
+        page2_final.csv -> the csv file needed for the 2nd page
+        page3_final.csv -> the csv file needed for the 3rd page
+        israel_map.geojson -> geojson file to process and display different districts (yeshuvim) in Israel
+
+        
+    preprocessing/
+        GDP_and_population_preprocessing.ipynb -> for preprocessing external GDP and population datasets
+        create_final_datasets.ipynb -> creating the final datasets (the one in the datasets/ folder)
+        create_israeli_map_and_yeshuvim.ipynb -> creating the geojson file
+        isr_pop.ipynb -> for preprocessing populations of different yeshuvim (districts)
+        visualization_preprocessing.ipynb -> initial preprocessing of raw immigration data
 
 
 
 
 
+In order to use:
 
+```
+Download all files in the datasets/ folder
+```
 
+```
+Download app.py
+```
 
+Have the following installations
+```
+pip install pandas streamlit plotly numpy matplotlib
+```
 
-
-
-
+Run app.py
 
 
 
