@@ -7,7 +7,7 @@ PATH_GEOJSON = r"C:\Users\user\Downloads\fixed_israel_map.geojson"
 import json
 import matplotlib
 import matplotlib.cm as cm
-matplotlib.use('Agg') # to not open separate window when using matplotlib
+matplotlib.use('Agg') # <--- THIS LINE IS CRITICAL FOR COLAB
 import matplotlib.colors as mcolors
 import colorsys # Required for shading
 
@@ -19,7 +19,7 @@ st.set_page_config(page_title="Israel Data Dashboard", page_icon="🇮🇱", lay
 # -------------------------
 # Navigation
 # -------------------------
-st.sidebar.title("ניווט")
+st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["מגמות עלייה ממדינות מוצא", "מגמות קליטה לפי יישובים", "תחומי תעסוקה של עולים לפי מדינת מוצא"])
 
 # -------------------------
@@ -42,9 +42,9 @@ if page == "מגמות עלייה ממדינות מוצא":
         st.markdown("### 🌍✈️✡️")
         st.caption("")
 
-    @st.cache_data(show_spinner=False) #to cache data, no need for spinning animation
+    @st.cache_data(show_spinner=False)
     def load_and_process_data(olim_path, gdp_path):
-        # loading the immigration data
+        # --- LOAD IMMIGRATION DATA (Now Aggregated) ---
         try:
             # We explicitly tell pandas to parse 'date' as dates
             monthly_olim = pd.read_csv(olim_path, parse_dates=["date"])
@@ -57,7 +57,8 @@ if page == "מגמות עלייה ממדינות מוצא":
         except Exception as e:
             return None, None, None, f"Error loading GDP data: {e}"
 
-        if "erez_moza" in df_gdp_raw.columns: #joining with erez moza
+        # [GDP Processing Logic remains exactly the same as your original code...]
+        if "erez_moza" in df_gdp_raw.columns:
             df_gdp_raw = df_gdp_raw.dropna(subset=["erez_moza"])
             df_gdp_raw["erez_moza"] = df_gdp_raw["erez_moza"].astype(str).str.strip()
         else:
@@ -270,7 +271,7 @@ if page == "מגמות עלייה ממדינות מוצא":
     y_range = [0, y_max * 1.05]
 
     with col_chart:
-        st.subheader("Immigration vs GDP")
+        st.subheader("""גרף אינטראקטיבי של עלייה מול תל"ג""")
         fig = px.scatter(
             grid, x="log_gdp", y="sqrt_cumulative", color="continent",
             color_discrete_map=color_map, size="bubble_size", size_max=60,
@@ -320,10 +321,15 @@ if page == "מגמות עלייה ממדינות מוצא":
         if fig.layout.updatemenus:
             fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = speed_ms
             fig.layout.updatemenus[0].buttons[0].args[1]["transition"]["duration"] = max(0, int(speed_ms * 0.35))
+            fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["redraw"] = True
 
         if fig.layout.sliders:
             fig.layout.sliders[0].currentvalue = {"visible": False}
             fig.layout.sliders[0].pad = {"t": 90}
+            for step in fig.layout.sliders[0].steps:
+            # step["args"][1] is the animation config for that specific step.
+            # We set redraw=True to force the background text (annotation) to update.
+                step["args"][1]["frame"]["redraw"] = True
 
         st.plotly_chart(fig, use_container_width=True)
 
@@ -336,7 +342,7 @@ if page == "מגמות עלייה ממדינות מוצא":
 # ==============================================================================
 elif page == "מגמות קליטה לפי יישובים":
 
-  st.set_page_config(layout="wide", page_title="")
+  st.set_page_config(layout="wide", page_title="Israel Demographics")
   st.subheader("מפת ערים ופרופילים דמוגרפיים")
 
   # ==============================================================================
@@ -661,10 +667,7 @@ elif page == "מגמות קליטה לפי יישובים":
 
 
 # ==============================================================================
-# PAGE 3: ALL MUNICIPALITIES MAP (NEW!)
-# ==============================================================================
-# ==============================================================================
-# PAGE 4: PROFESSIONAL FLOW (SANKEY)
+# PAGE 3: PROFESSIONAL FLOW (SANKEY)
 # ==============================================================================
 elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא": 
     st.subheader("זרימת עולים: מארץ מוצא לתחום עיסוק")
