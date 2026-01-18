@@ -310,7 +310,7 @@ if page == "מגמות עלייה ממדינות מוצא":
 # ==============================================================================
 elif page == "מגמות קליטה לפי יישובים":
 
-  st.set_page_config(layout="wide", page_title="Israel Demographics")
+  st.set_page_config(layout="wide", page_title="מפת ערים ופרופילים דמוגרפיים", page_icon="🏙️")
   st.subheader("מפת ערים ופרופילים דמוגרפיים")
 
   # ==============================================================================
@@ -433,7 +433,8 @@ elif page == "מגמות קליטה לפי יישובים":
 
   c_ctrl1, c_ctrl2, c_ctrl3 = st.columns([2, 0.5, 1.5])
   with c_ctrl1:
-      st.multiselect("בחר יישובים (חיפוש/סינון):", options=dropdown_ids, key='city_selector', on_change=on_search_change, format_func=lambda x: id_to_name.get(x, x), placeholder="כל הישובים (הקלד לחיפוש)")
+      st.multiselect(
+    "בחר יישובים (חיפוש/סינון):",options=dropdown_ids,default=st.session_state.selected_cities, key='city_selector',on_change=on_search_change,format_func=lambda x: id_to_name.get(x, x),placeholder="כל הישובים (הקלד לחיפוש)")
   with c_ctrl2:
       st.write(""); st.write("")
       st.button("🔄 איפוס", use_container_width=True, on_click=on_reset_click)
@@ -634,44 +635,38 @@ elif page == "מגמות קליטה לפי יישובים":
       st.dataframe(table_display.style.format({'גיל ממוצע': "{:.1f}", 'מדד': "{:.2f}", '% תעסוקה': "{:.1f}%", '% נשים': "{:.1f}%", 'סה"כ עולים': "{:,.0f}"}), use_container_width=True, hide_index=True)
 
 
+
 # ==============================================================================
 # PAGE 3: PROFESSIONAL FLOW (SANKEY)
 # ==============================================================================
 elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא":
     
-    # --- 1. RTL CSS Configuration (Updated for Headers) ---
+    # --- 1. CSS: Scoped RTL (Main content only) ---
     st.markdown("""
         <style>
-        /* 1. Main Container RTL */
-        .stApp {
-            direction: rtl;
-        }
-        
-        /* 2. Force Headers (h1-h6) to align right */
-        h1, h2, h3, h4, h5, h6 {
+        [data-testid="stMain"] h1, 
+        [data-testid="stMain"] h2, 
+        [data-testid="stMain"] h3, 
+        [data-testid="stMain"] h4, 
+        [data-testid="stMain"] h5, 
+        [data-testid="stMain"] h6, 
+        [data-testid="stMain"] p, 
+        [data-testid="stMain"] .stCaption {
             text-align: right !important;
-            direction: rtl;
-        }
-        
-        /* 3. Force Text Paragraphs and Captions to align right */
-        p, .stCaption {
-            text-align: right !important;
-            direction: rtl;
-        }
-        
-        /* 4. Fix specific Streamlit Markdown containers */
-        div[data-testid="stMarkdownContainer"] {
-            text-align: right !important;
-        }
-        
-        /* 5. Adjust Widget Labels (Selectbox, Multiselect, etc) */
-        label {
-            text-align: right !important;
-            direction: rtl;
-            width: 100%;
+            direction: rtl !important;
         }
 
-        /* 6. Modebar fix */
+        [data-testid="stMain"] .stMultiSelect label, 
+        [data-testid="stMain"] .stButton button {
+            text-align: right !important;
+            direction: rtl !important;
+            width: 100%;
+        }
+        
+        [data-testid="stMain"] div[data-baseweb="select"] {
+            direction: rtl;
+        }
+
         .modebar {
             left: 0 !important;
             right: auto !important;
@@ -697,7 +692,6 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
     
     sorted_options = top_4_countries + [c for c in all_countries_available if c not in top_4_countries]
 
-    # --- Session State Logic for Buttons ---
     if 'country_selector' not in st.session_state:
         st.session_state['country_selector'] = top_4_countries
 
@@ -707,11 +701,13 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
     def deselect_all():
         st.session_state['country_selector'] = []
 
-    # Button Layout
-    col1, col2, col3 = st.columns([1, 1, 4])
+    # --- Button Layout ---
+    col1, col2, col3 = st.columns([6, 1, 1])
     with col1:
-        st.button("בחר הכל", on_click=select_all, use_container_width=True)
+        st.empty() 
     with col2:
+        st.button("בחר הכל", on_click=select_all, use_container_width=True)
+    with col3:
         st.button("נקה בחירה", on_click=deselect_all, use_container_width=True)
 
     selected_countries = st.multiselect(
@@ -774,7 +770,8 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
             line=dict(color="black", width=0.5),
             label=styled_labels,
             color=node_colors,
-            hovertemplate='<b>%{label}</b><br>כמות: %{value}<extra></extra>',
+            # Node Hover: Added <span style='color:black'> to force the number to match the text
+            hovertemplate='<b>%{label}</b><br>כמות: <span style="color:black"><b>%{value:,.0f}</b></span><extra></extra>',
             align='right' 
         ),
         link=dict(
@@ -782,12 +779,13 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
             target=target_indices,
             value=values,
             color=link_colors,
+            # Link Hover: Added <span style='color:black'> to force the number to match the text
             hovertemplate=(
-                '<b>%{target.label}</b> :מקצוע' + 
+                'מדינת מוצא: <b>%{source.label}</b>' + 
                 '<br>' + 
-                '<b>%{source.label}</b> :מדינת מוצא' + 
+                'מקצוע: <b>%{target.label}</b>' + 
                 '<br>' + 
-                'כמות: %{value}<extra></extra>'
+                'כמות: <span style="color:black"><b>%{value:,.0f}</b></span><extra></extra>'
             )
         )
     )])
