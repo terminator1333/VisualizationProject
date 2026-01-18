@@ -98,7 +98,6 @@ pip install pandas streamlit plotly numpy matplotlib
 
 Check out the final product!
 
--------------------------------------
 https://visualizationproject-mzmzuho2fgrmkweanz6rmi.streamlit.app/
 -------------------------------------
 
