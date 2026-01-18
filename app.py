@@ -26,13 +26,13 @@ page = st.sidebar.radio("Go to", ["מגמות עלייה ממדינות מוצא
 # Configuration
 # -------------------------
 
-PATH_GEOJSON = "VisualizationProject/datasets/israel_map.geojson"
+PATH_GEOJSON = "datasets/israel_map.geojson"
 
-PAGE1_PATH = "VisualizationProject/datasets/page1_final.csv"
+PAGE1_PATH = "datasets/page1_final.csv"
 
-PAGE2_PATH = "VisualizationProject/datasets/page2_final.csv"
+PAGE2_PATH = "datasets/page2_final.csv"
 
-PAGE3_PATH = "VisualizationProject/datasets/page3_final.csv"
+PAGE3_PATH = "datasets/page3_final.csv"
 
 # ==============================================================================
 # PAGE 1: IMMIGRATION TRENDS
