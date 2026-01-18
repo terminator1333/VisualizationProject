@@ -25,7 +25,6 @@ page = st.sidebar.radio("Go to", ["מגמות עלייה ממדינות מוצא
 # -------------------------
 # Configuration
 # -------------------------
-
 PATH_GEOJSON = "datasets/israel_map.geojson"
 
 PAGE1_PATH = "datasets/page1_final.csv"
