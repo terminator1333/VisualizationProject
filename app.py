@@ -11,7 +11,6 @@ matplotlib.use('Agg') # to not open new window when using matplotlib
 import matplotlib.colors as mcolors
 import colorsys # Required for shading
 
-
 # -------------------------
 # Page setup
 # -------------------------
@@ -20,12 +19,13 @@ st.set_page_config(page_title="Israel Data Dashboard", page_icon="🇮🇱", lay
 # -------------------------
 # Navigation
 # -------------------------
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["מגמות עלייה ממדינות מוצא", "מגמות קליטה לפי יישובים", "תחומי תעסוקה של עולים לפי מדינת מוצא"]) #all the pages
+st.sidebar.title("ניווט")
+page = st.sidebar.radio("עבור אל", ["מגמות עלייה ממדינות מוצא", "מגמות קליטה לפי יישובים", "תחומי תעסוקה של עולים לפי מדינת מוצא"]) #all the pages
 
 # -------------------------
 # Configuration
 # -------------------------
+
 PATH_GEOJSON = "datasets/israel_map.geojson"
 
 PAGE1_PATH = "datasets/page1_final.csv"
@@ -41,9 +41,9 @@ if page == "מגמות עלייה ממדינות מוצא":
 
     col_header_1, col_header_2 = st.columns([4, 1])
     with col_header_1:
-        st.title("עלייה לאורך השנים")
-    with col_header_2:
         st.markdown("### 🌍✈️✡️")
+    with col_header_2:
+        st.title("עלייה לאורך השנים")
         st.caption("")
 
     @st.cache_data(show_spinner=False)
@@ -66,7 +66,7 @@ if page == "מגמות עלייה ממדינות מוצא":
         st.error(error)
         st.stop()
 
-    st.markdown("### Filters")
+    st.markdown("### פילטרים")
     c1, c2, c3 = st.columns([2, 2, 3])
 
     min_date = df_merged["date"].min()
@@ -74,18 +74,18 @@ if page == "מגמות עלייה ממדינות מוצא":
 
     with c1:
         year_range = st.slider(
-            "Year Range",
+            "תחום שנים",
             int(min_date.year),
             int(max_date.year),
             (int(min_date.year), int(max_date.year))
         )
 
     with c2:
-        speed_ms = st.slider("Animation Speed (ms)", 50, 500, 100, step=10)
+        speed_ms = st.slider("מהירות אנימציה (מילישניות)", 50, 500, 100, step=10)
 
     with c3:
         all_continents = sorted(df_merged["continent"].unique())
-        selected_continents = st.multiselect("Continents", all_continents, default=all_continents)
+        selected_continents = st.multiselect("יבשות", all_continents, default=all_continents)
 
     timeline = pd.date_range(
         start=f"{year_range[0]}-01-01",
@@ -99,7 +99,7 @@ if page == "מגמות עלייה ממדינות מוצא":
     ].copy()
 
     if base_filtered.empty:
-        st.warning("No immigration data found.")
+        st.warning("לא נמצאו נתוני עלייה.")
         st.stop()
 
     default_colors = px.colors.qualitative.Plotly
@@ -114,7 +114,7 @@ if page == "מגמות עלייה ממדינות מוצא":
 
     with col_right:
         map_placeholder = st.empty()
-        st.markdown("#### Select Countries")
+        st.markdown("#### בחר מדינות")
 
         country_stats = base_filtered.groupby("erez_moza")["monthly_count"].sum().sort_values(ascending=False)
         all_countries_sorted = sorted(base_filtered["erez_moza"].unique())
@@ -125,14 +125,14 @@ if page == "מגמות עלייה ממדינות מוצא":
             if key not in st.session_state:
                 st.session_state[key] = country in default_top_25
 
-        search_query = st.text_input("Search Country", "", placeholder="Type to filter...")
+        search_query = st.text_input("חפש מדינה", "", placeholder="הקלד לסינון...")
         visible_countries = [c for c in all_countries_sorted if search_query.lower() in c.lower()]
 
         btn_col1, btn_col2 = st.columns(2)
-        if btn_col1.button("Select All"):
+        if btn_col1.button("בחר הכל"):
             for country in visible_countries: st.session_state[f"chk_{country}"] = True
             st.rerun()
-        if btn_col2.button("Deselect All"):
+        if btn_col2.button("הסר הכל"):
             for country in visible_countries: st.session_state[f"chk_{country}"] = False
             st.rerun()
 
@@ -254,9 +254,9 @@ if page == "מגמות עלייה ממדינות מוצא":
         my_hover_template = (
             "<b>%{hovertext}</b><br>" +
             "<span style='font-size: 10px; color: #666;'>%{customdata[0]}</span><br><br>" +
-            "Total Immigrants: <b>%{customdata[1]}</b><br>" +
-            "Monthly Immigrants: <b>%{customdata[2]}</b><br>" +
-            "GDP (Annualized): <b>%{customdata[3]}</b>" +
+            "סך העולים: <b>%{customdata[1]}</b><br>" +
+            "עולים חודשיים: <b>%{customdata[2]}</b><br>" +
+            "תל\"ג (שנתי): <b>%{customdata[3]}</b>" +
             "<extra></extra>"
         )
         fig.update_traces(hovertemplate=my_hover_template, marker=dict(opacity=0.9, line=dict(width=1, color='DarkSlateGrey')))
@@ -301,7 +301,7 @@ if page == "מגמות עלייה ממדינות מוצא":
 
         st.plotly_chart(fig, use_container_width=True)
 
-        if st.checkbox("Show Data Table", value=False):
+        if st.checkbox("הצג טבלה", value=False):
             st.dataframe(grid)
 
 
@@ -633,7 +633,6 @@ elif page == "מגמות קליטה לפי יישובים":
       rename_map = {'hebrew_name': 'שם הישוב', 'avg_age': 'גיל ממוצע', 'madad': 'מדד', 'pct_employed': '% תעסוקה', 'pct_female': '% נשים', 'total_olim': 'סה"כ עולים'}
       table_display = selected_data[cols_to_show].rename(columns=rename_map)
       st.dataframe(table_display.style.format({'גיל ממוצע': "{:.1f}", 'מדד': "{:.2f}", '% תעסוקה': "{:.1f}%", '% נשים': "{:.1f}%", 'סה"כ עולים': "{:,.0f}"}), use_container_width=True, hide_index=True)
-
 
 
 # ==============================================================================
