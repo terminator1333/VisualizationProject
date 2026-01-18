@@ -637,7 +637,48 @@ elif page == "מגמות קליטה לפי יישובים":
 # ==============================================================================
 # PAGE 3: PROFESSIONAL FLOW (SANKEY)
 # ==============================================================================
-elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא": 
+elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא":
+    
+    # --- 1. RTL CSS Configuration (Updated for Headers) ---
+    st.markdown("""
+        <style>
+        /* 1. Main Container RTL */
+        .stApp {
+            direction: rtl;
+        }
+        
+        /* 2. Force Headers (h1-h6) to align right */
+        h1, h2, h3, h4, h5, h6 {
+            text-align: right !important;
+            direction: rtl;
+        }
+        
+        /* 3. Force Text Paragraphs and Captions to align right */
+        p, .stCaption {
+            text-align: right !important;
+            direction: rtl;
+        }
+        
+        /* 4. Fix specific Streamlit Markdown containers */
+        div[data-testid="stMarkdownContainer"] {
+            text-align: right !important;
+        }
+        
+        /* 5. Adjust Widget Labels (Selectbox, Multiselect, etc) */
+        label {
+            text-align: right !important;
+            direction: rtl;
+            width: 100%;
+        }
+
+        /* 6. Modebar fix */
+        .modebar {
+            left: 0 !important;
+            right: auto !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.subheader("זרימת עולים: מארץ מוצא לתחום עיסוק")
     st.caption("תרשים זרימה המציג את המעבר בין מדינות המוצא לקבוצות מקצועיות (לאחר איחוד קטגוריות).")
 
@@ -645,24 +686,38 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
     @st.cache_data
     def load_sankey_data(path):
         df = pd.read_csv(path)
-        
         return df
 
     df_sankey = load_sankey_data(PAGE3_PATH) 
 
     # 2. Controls - Country Selection
     country_totals = df_sankey.groupby('erez_moza')['count'].sum()
-
     top_4_countries = country_totals.nlargest(4).index.tolist()
     all_countries_available = df_sankey['erez_moza'].unique().tolist()
-
     
     sorted_options = top_4_countries + [c for c in all_countries_available if c not in top_4_countries]
+
+    # --- Session State Logic for Buttons ---
+    if 'country_selector' not in st.session_state:
+        st.session_state['country_selector'] = top_4_countries
+
+    def select_all():
+        st.session_state['country_selector'] = sorted_options
+
+    def deselect_all():
+        st.session_state['country_selector'] = []
+
+    # Button Layout
+    col1, col2, col3 = st.columns([1, 1, 4])
+    with col1:
+        st.button("בחר הכל", on_click=select_all, use_container_width=True)
+    with col2:
+        st.button("נקה בחירה", on_click=deselect_all, use_container_width=True)
 
     selected_countries = st.multiselect(
         "בחר מדינות להצגה:",
         options=sorted_options,
-        default=top_4_countries
+        key='country_selector' 
     )
 
     if not selected_countries:
@@ -671,27 +726,15 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
 
     # 3. Filter Data
     flows = df_sankey[df_sankey['erez_moza'].isin(selected_countries)].copy()
+    
     # 4. Prepare Sankey Data
     unique_countries = selected_countries
-
     unique_subjects = flows['subject'].unique().tolist()
-
     all_labels = unique_countries + unique_subjects
 
-    # Create Indices
-    # We use the selected countries list directly (Source)
-    unique_countries = selected_countries 
-    # We use ONLY subjects present in the filtered, mapped flows (Target)
-    unique_subjects = flows['subject'].unique().tolist()
-
-    all_labels = unique_countries + unique_subjects
-    
-    # --- FORMATED LABELS
-    # Instead of moving text, we use HTML to give it a background color.
-    # This guarantees readability regardless of where Plotly places the node.
+    # Formatted Labels
     styled_labels = []
     for label in all_labels:
-        # white background (0.8 opacity), black text, bold
         styled_labels.append(f"<span style='background-color:rgba(255,255,255,0.8); color:black;'><b>{label}</b></span>")
 
     label_map = {label: i for i, label in enumerate(all_labels)}
@@ -727,28 +770,39 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
     fig = go.Figure(data=[go.Sankey(
         node=dict(
             pad=20,
-            thickness=30, # Thick nodes help visual separation
+            thickness=30,
             line=dict(color="black", width=0.5),
-            label=styled_labels, # Use the HTML styled labels
+            label=styled_labels,
             color=node_colors,
-            hovertemplate='<b>%{label}</b><br>כמות: %{value}<extra></extra>'
+            hovertemplate='<b>%{label}</b><br>כמות: %{value}<extra></extra>',
+            align='right' 
         ),
         link=dict(
             source=source_indices,
             target=target_indices,
             value=values,
             color=link_colors,
-            hovertemplate='<b>%{source.label}</b> ← <b>%{target.label}</b><br>כמות: %{value}<extra></extra>'
+            hovertemplate=(
+                '<b>%{target.label}</b> :מקצוע' + 
+                '<br>' + 
+                '<b>%{source.label}</b> :מדינת מוצא' + 
+                '<br>' + 
+                'כמות: %{value}<extra></extra>'
+            )
         )
     )])
 
     fig.update_layout(
-        title_text="<b>התפלגות מקצועות לפי מדינות מוצא</b>",
+        title=dict(
+            text="<b>התפלגות מקצועות לפי מדינות מוצא</b>",
+            x=1,            
+            xanchor='right' 
+        ),
         title_font_size=20,
         font=dict(family="Arial, sans-serif", size=14, color="black"),
         plot_bgcolor='white',
         height=700,
-        margin=dict(l=10, r=10, t=50, b=10)
+        margin=dict(l=10, r=10, t=50, b=10),
     )
 
     st.plotly_chart(fig, use_container_width=True)
