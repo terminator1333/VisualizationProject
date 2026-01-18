@@ -239,6 +239,9 @@ if page == "מגמות עלייה ממדינות מוצא":
 
     with col_chart:
         st.subheader("""גרף אינטראקטיבי של עלייה מול תל"ג""")
+        
+        # 1. Create the base chart
+        # We preserve your exact configuration here
         fig = px.scatter(
             grid, x="log_gdp", y="sqrt_cumulative", color="continent",
             color_discrete_map=color_map, size="bubble_size", size_max=60,
@@ -250,6 +253,7 @@ if page == "מגמות עלייה ממדינות מוצא":
             category_orders={"continent": all_continents}
         )
 
+        # 2. Define custom hover template
         my_hover_template = (
             "<b>%{hovertext}</b><br>" +
             "<span style='font-size: 10px; color: #666;'>%{customdata[0]}</span><br><br>" +
@@ -258,87 +262,90 @@ if page == "מגמות עלייה ממדינות מוצא":
             "תל\"ג (שנתי): <b>%{customdata[3]}</b>" +
             "<extra></extra>"
         )
+        
+        # Apply hover template to the existing bubbles (Trace 0) BEFORE we add the text
         fig.update_traces(hovertemplate=my_hover_template, marker=dict(opacity=0.9, line=dict(width=1, color='DarkSlateGrey')))
 
-        if fig.frames:
-            for frame in fig.frames:
-                if frame.data:
-                    for trace in frame.data:
-                        trace.hovertemplate = my_hover_template
-
-        fig.update_layout(
-            height=700, margin=dict(l=20, r=20, t=40, b=130),
-            xaxis=dict(range=x_range, title="""לוגריתם תל"ג"""),
-            yaxis=dict(range=y_range, title="שורש כמות העולים המצטברת"),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            hoverlabel=dict(
-        align="right"  # This aligns the text block to the right
-    )
+        # 3. Calculate Position for Background Text
+        # MOVED: Set to 0.5 (Center) instead of 0.02 (Left)
+        text_x_pos = x_range[0] + (x_range[1] - x_range[0]) * 0.5
+        text_y_pos = y_range[1] * 0.5
         
+        # 4. Create the Background Text Trace
+        background_text_trace = go.Scatter(
+            x=[text_x_pos],
+            y=[text_y_pos],
+            text=[grid["month_str"].min()],
+            mode="text",
+            textfont=dict(size=160, color="rgba(200, 200, 200, 0.25)"), # Slightly transparent
+            textposition="middle center", # Centers the text on the coordinates
+            hoverinfo="skip", # CRITICAL: Ensures hovering the year doesn't break things
+            showlegend=False
         )
 
-        fig.add_annotation(
-            text="<b>יבשות</b>",  # The title text
-            xref="paper", yref="paper",
-            x=1.0,        # Aligned to the far right edge of the chart area
-            y=1.12,       # Slightly above the legend items (adjust if needed)
-            xanchor="right", # Anchors the text to the right side
-            yanchor="bottom",
-            showarrow=False,
-            font=dict(size=14, color="black")
-        )
+        # 5. Add trace and Reorder safely to fix ValueError
+        fig.add_trace(background_text_trace)
+        # Move the last trace (text) to the front (index 0) so it is behind bubbles
+        fig.data = fig.data[-1:] + fig.data[:-1]
 
-        legend_title_annotation = dict(
-            text="<b>יבשות</b>",
-            xref="paper", yref="paper",
-            x=1.0, 
-            y=1.05,             # <--- Lowered slightly from 1.12 to 1.08 to fit better
-            xanchor="right", 
-            yanchor="bottom",
-            showarrow=False,
-            font=dict(size=14)  # <--- Removed 'color="black"' so it works in Dark Mode too
-        )
+        # 6. Update all Animation Frames
+        for frame in fig.frames:
+            # Create the text trace for this specific frame
+            frame_text_trace = go.Scatter(
+                x=[text_x_pos],
+                y=[text_y_pos],
+                text=[frame.name],
+                mode="text",
+                textfont=dict(size=160, color="rgba(200, 200, 200, 0.25)"),
+                textposition="middle center",
+                hoverinfo="skip",
+                showlegend=False
+            )
+            # Insert text trace at index 0 for every frame to match fig.data
+            frame.data = (frame_text_trace,) + frame.data
+            
+            # Re-apply hover template to bubbles (now at index 1)
+            for trace in frame.data:
+                if trace.mode != "text":
+                    trace.hovertemplate = my_hover_template
+
+        # 7. Configure Layout
         fig.update_layout(
             height=700, 
-            # Increased 't' to 90 to prevent the title from being cut off
-            margin=dict(l=20, r=20, t=90, b=130), 
+            margin=dict(l=20, r=20, t=90, b=130),
             xaxis=dict(range=x_range, title="""לוגריתם תל"ג"""),
             yaxis=dict(range=y_range, title="שורש כמות העולים המצטברת"),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             hoverlabel=dict(align="right")
         )
 
-        text_style = dict(
-            xref="paper", yref="paper", x=0.01, y=0.99,
-            xanchor="left", yanchor="top", showarrow=False,
-            font=dict(size=160, color="rgba(160, 160, 160, 0.35)")
-        )
-        first_date = grid["month_str"].min()
-        fig.add_annotation(text=first_date, **text_style)
-
-        if fig.frames:
-            for frame in fig.frames:
-                frame.layout.annotations = [dict(text=frame.name, **text_style)]
-
+        # 8. Optimization: Enable smooth animation
         if fig.layout.updatemenus:
-            fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = speed_ms
-            fig.layout.updatemenus[0].buttons[0].args[1]["transition"]["duration"] = max(0, int(speed_ms * 0.35))
-            fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["redraw"] = True
+            btn = fig.layout.updatemenus[0].buttons[0]
+            btn.args[1]["frame"]["duration"] = speed_ms
+            btn.args[1]["transition"]["duration"] = max(0, int(speed_ms * 0.5))
+            btn.args[1]["frame"]["redraw"] = False  # Smooth animation
 
         if fig.layout.sliders:
             fig.layout.sliders[0].currentvalue = {"visible": False}
             fig.layout.sliders[0].pad = {"t": 90}
             for step in fig.layout.sliders[0].steps:
-            # step["args"][1] is the animation config for that specific step.
-            # We set redraw=True to force the background text (annotation) to update.
-                step["args"][1]["frame"]["redraw"] = True
+                step["args"][1]["frame"]["redraw"] = False
+
+        # Static annotation for Legend Title
+        fig.add_annotation(
+            text="<b>יבשות</b>",
+            xref="paper", yref="paper",
+            x=1.0, y=1.05,
+            xanchor="right", yanchor="bottom",
+            showarrow=False,
+            font=dict(size=14)
+        )
 
         st.plotly_chart(fig, use_container_width=True)
 
         if st.checkbox("הצג טבלה", value=False):
             st.dataframe(grid)
-
-
 # ==============================================================================
 # PAGE 2: ISRAEL CITIES MAP (City Profiles)
 # ==============================================================================
