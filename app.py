@@ -3,7 +3,6 @@ import streamlit as st
 import plotly.express as px
 import numpy as np
 import plotly.graph_objects as go
-
 import json
 import matplotlib
 import matplotlib.cm as cm
@@ -247,7 +246,7 @@ if page == "מגמות עלייה ממדינות מוצא":
             hover_name="erez_moza",
             hover_data={"continent": True, "fmt_cum": True, "fmt_monthly": True, "fmt_gdp": True,
                         "log_gdp": False, "sqrt_cumulative": False, "bubble_size": False, "month_str": False},
-            labels={"log_gdp": "Log(GDP + 1)", "sqrt_cumulative": "Sqrt(Cumulative Immigrants)"},
+            labels={"log_gdp": "Log(GDP + 1)", "sqrt_cumulative": "Sqrt(Cumulative Immigrants)", "continent": ""},
             category_orders={"continent": all_continents}
         )
 
@@ -271,7 +270,42 @@ if page == "מגמות עלייה ממדינות מוצא":
             height=700, margin=dict(l=20, r=20, t=40, b=130),
             xaxis=dict(range=x_range, title="""לוגריתם תל"ג"""),
             yaxis=dict(range=y_range, title="שורש כמות העולים המצטברת"),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            hoverlabel=dict(
+        align="right"  # This aligns the text block to the right
+    )
+        
+        )
+
+        fig.add_annotation(
+            text="<b>יבשות</b>",  # The title text
+            xref="paper", yref="paper",
+            x=1.0,        # Aligned to the far right edge of the chart area
+            y=1.12,       # Slightly above the legend items (adjust if needed)
+            xanchor="right", # Anchors the text to the right side
+            yanchor="bottom",
+            showarrow=False,
+            font=dict(size=14, color="black")
+        )
+
+        legend_title_annotation = dict(
+            text="<b>יבשות</b>",
+            xref="paper", yref="paper",
+            x=1.0, 
+            y=1.05,             # <--- Lowered slightly from 1.12 to 1.08 to fit better
+            xanchor="right", 
+            yanchor="bottom",
+            showarrow=False,
+            font=dict(size=14)  # <--- Removed 'color="black"' so it works in Dark Mode too
+        )
+        fig.update_layout(
+            height=700, 
+            # Increased 't' to 90 to prevent the title from being cut off
+            margin=dict(l=20, r=20, t=90, b=130), 
+            xaxis=dict(range=x_range, title="""לוגריתם תל"ג"""),
+            yaxis=dict(range=y_range, title="שורש כמות העולים המצטברת"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            hoverlabel=dict(align="right")
         )
 
         text_style = dict(
@@ -433,8 +467,20 @@ elif page == "מגמות קליטה לפי יישובים":
 
   c_ctrl1, c_ctrl2, c_ctrl3 = st.columns([2, 0.5, 1.5])
   with c_ctrl1:
+      # 1. Sync Logic: If the widget key doesn't exist yet, fill it from your saved data
+      if 'city_selector' not in st.session_state:
+          st.session_state.city_selector = st.session_state.selected_cities
+      
+      # 2. Widget: REMOVE "default=...". The widget automatically reads the value from 'key'
       st.multiselect(
-    "בחר יישובים (חיפוש/סינון):",options=dropdown_ids,default=st.session_state.selected_cities, key='city_selector',on_change=on_search_change,format_func=lambda x: id_to_name.get(x, x),placeholder="כל הישובים (הקלד לחיפוש)")
+          "בחר יישובים (חיפוש/סינון):",
+          options=dropdown_ids,
+          key='city_selector', # <--- This reads the value set in step 1
+          on_change=on_search_change,
+          format_func=lambda x: id_to_name.get(x, x),
+          placeholder="כל הישובים (הקלד לחיפוש)"
+      )
+
   with c_ctrl2:
       st.write(""); st.write("")
       st.button("🔄 איפוס", use_container_width=True, on_click=on_reset_click)
