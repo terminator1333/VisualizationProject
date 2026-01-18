@@ -11,19 +11,6 @@ matplotlib.use('Agg') # to not open new window when using matplotlib
 import matplotlib.colors as mcolors
 import colorsys # Required for shading
 
-import streamlit as st
-from pathlib import Path
-import os
-
-st.write("CWD:", os.getcwd())
-st.write("Root files:", os.listdir("."))
-st.write("Datasets folder exists:", Path("datasets").exists())
-
-if Path("datasets").exists():
-    st.write("Datasets contents:", os.listdir("datasets"))
-
-geo_path = Path("datasets/israel_map.geojson")
-st.write("GeoJSON exists:", geo_path.exists())
 
 # -------------------------
 # Page setup
@@ -417,7 +404,7 @@ elif page == "מגמות קליטה לפי יישובים":
 
   df_profile = load_data()
   try:
-      with open(r"C:\Users\user\Downloads\israel_map.geojson", "r", encoding="utf-8") as f:
+      with open(PATH_GEOJSON, "r", encoding="utf-8") as f:
           cities_geojson = json.load(f)
   except:
       st.error("Missing map file.")
