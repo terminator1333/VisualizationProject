@@ -11,6 +11,7 @@ import matplotlib.colors as mcolors
 import colorsys # Required for shading
 from PIL import Image
 import os
+from plotly.colors import sample_colorscale
 
 # -------------------------
 # Page setup
@@ -193,8 +194,6 @@ if page == "דף הבית":
             return Image.open(path)
         return None
 
-    # Image Paths
-    
 
     img_ship = load_image(PATH_SHIP)
     img_plane_ethiopia = load_image(PATH_PLANE_ETHIOPIA)
@@ -316,7 +315,7 @@ if page == "דף הבית":
         st.info(" **הצצה לנתונים**")
 
         # Mock Data Variables (Replace with your logic)
-        total_olim_heb = 362157     
+        total_olim_heb = 360000     
         top_country_heb = "רוסיה (159,748)"
         
         st.markdown(f"""
@@ -328,18 +327,14 @@ if page == "דף הבית":
 
         st.markdown(f"""
         <div class="metric-container">
-            <div class="metric-label"> שלושת המדינות עם הכי הרבה עולים</div>
-            <div class="metric-value-list">
-                1. רוסיה (159,748)<br>
-                2. אוקראינה (58,888)<br>
-                3. צרפת (33,011)
-            </div>
+            <div class="metric-label">מדינת המוצא המובילה</div>
+            <div class="metric-value-large" style="font-size: 1.5rem;">{top_country_heb}</div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <div class="metric-container">
-            <div class="metric-label">שלושת הערים עם הכי הרבה עולים</div>
+            <div class="metric-label">3 הערים עם הכי הרבה עולים</div>
             <div class="metric-value-list">
                 1. תל אביב (44,406)<br>
                 2. נתניה (38,607)<br>
@@ -484,7 +479,7 @@ elif page == "מגמות עלייה ממדינות מוצא":
                 countrycolor="white", projection_type="natural earth",
                 showframe=False, showcoastlines=False
             )
-            base_choropleth = px.choropleth(
+            base_choropleth = px.choropleth( #TODO
                 map_data, locations="english_name", locationmode="country names",
                 color="continent", color_discrete_map=color_map,
                 category_orders={"continent": all_continents},
@@ -556,7 +551,7 @@ elif page == "מגמות עלייה ממדינות מוצא":
         
         # 1. Create the base chart
         # We preserve your exact configuration here
-        fig = px.scatter(
+        fig = px.scatter( #TODO
             grid, x="log_gdp", y="sqrt_cumulative", color="continent",
             color_discrete_map=color_map, size="bubble_size", size_max=60,
             animation_frame="month_str", animation_group="erez_moza",
@@ -827,38 +822,28 @@ elif page == "מגמות קליטה לפי יישובים":
           'min_plot': df_profile[f['plot_col']].min(), 'max_plot': df_profile[f['plot_col']].max()
       }
 
-  # --- SHADED MATPLOTLIB LOGIC ---
+  
+  
   log_min, log_max = df_profile['log_total_olim'].min(), df_profile['log_total_olim'].max()
 
-  try:
-      mpl_cmap = matplotlib.colormaps['jet']
-  except:
-      mpl_cmap = cm.get_cmap('jet')
-
-  SHADING_FACTOR = 0.7
-
-  def apply_shading(rgb_tuple, factor):
-      h, s, v = colorsys.rgb_to_hsv(rgb_tuple[0], rgb_tuple[1], rgb_tuple[2])
-      v = v * factor
-      return colorsys.hsv_to_rgb(h, s, v)
-
-  def get_mpl_color(value, vmin, vmax, opacity=1.0):
+  def get_amp_color(value, vmin, vmax, opacity=1.0):
+      # 1. Normalize the value (0 to 1)
       norm_val = (value - vmin) / (vmax - vmin) if vmax > vmin else 0.5
-      rgba = mpl_cmap(norm_val)
-      shaded_rgb = apply_shading(rgba[:3], SHADING_FACTOR)
-      return f"rgba({int(shaded_rgb[0]*255)}, {int(shaded_rgb[1]*255)}, {int(shaded_rgb[2]*255)}, {opacity})"
-
-  def mpl_to_plotly_scale(cmap, steps=255):
-      scale = []
-      for i in range(steps + 1):
-          norm = i / steps
-          rgba = cmap(norm)
-          shaded_rgb = apply_shading(rgba[:3], SHADING_FACTOR)
-          color_string = f"rgb({int(shaded_rgb[0]*255)}, {int(shaded_rgb[1]*255)}, {int(shaded_rgb[2]*255)})"
-          scale.append([norm, color_string])
-      return scale
-
-  plotly_jet_scale = mpl_to_plotly_scale(mpl_cmap)
+      
+      # 2. Sample the "Amp" scale at this normalized point
+      # sample_colorscale returns a list of strings, we take the first one
+      color_string = sample_colorscale("Amp", [norm_val])[0]
+      
+      # 3. Convert to RGBA to handle opacity
+      # Plotly usually returns 'rgb(r, g, b)' or hex. We handle both.
+      if color_string.startswith("rgb"):
+          return color_string.replace("rgb", "rgba").replace(")", f", {opacity})")
+      elif color_string.startswith("#"):
+          # Convert hex to rgba
+          h = color_string.lstrip('#')
+          r, g, b = tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+          return f"rgba({r}, {g}, {b}, {opacity})"
+      return color_string
 
 
   # ==============================================================================
@@ -881,12 +866,14 @@ elif page == "מגמות קליטה לפי יישובים":
       is_selected = (eid in current_selection) or is_all_mode
 
       if is_all_mode:
-          line_color = get_mpl_color(row['log_total_olim'], log_min, log_max, opacity=0.35)
+          # CHANGE HERE: Use get_amp_color instead of get_mpl_color
+          line_color = get_amp_color(row['log_total_olim'], log_min, log_max, opacity=0.35)
           line_width = 1.5; hover_info = 'text'
           htemplate = f"<b>{row['hebrew_name']}</b><br>מדד: {row['madad']:.2f}<br>עולים: {int(row['total_olim']):,}<extra></extra>"
       else:
           if is_selected:
-              line_color = get_mpl_color(row['log_total_olim'], log_min, log_max, opacity=1.0)
+              # CHANGE HERE: Use get_amp_color instead of get_mpl_color
+              line_color = get_amp_color(row['log_total_olim'], log_min, log_max, opacity=1.0)
               line_width = 4.0; hover_info = 'text'
               htemplate = f"<b>{row['hebrew_name']}</b><br>מדד: {row['madad']:.2f}<br>עולים: {int(row['total_olim']):,}<extra></extra>"
           else:
@@ -900,7 +887,7 @@ elif page == "מגמות קליטה לפי יישובים":
           y_vals.append(norm)
           hover_texts.append(f"{val_real:.1f}{f['suffix']}")
 
-      traces.append(go.Scatter(
+      traces.append(go.Scatter( #TODO
           x=x_labels, y=y_vals, mode='lines',
           line=dict(color=line_color, width=line_width),
           name=row['hebrew_name'], text=hover_texts, hovertemplate=htemplate,
@@ -943,16 +930,16 @@ elif page == "מגמות קליטה לפי יישובים":
   if not is_all_mode:
       selected_indices = df_reset.index[df_reset['english_id'].isin(current_selection)].tolist()
 
-  fig_map = go.Figure(go.Choroplethmapbox(
+  fig_map = go.Figure(go.Choroplethmapbox( 
       geojson=cities_geojson, locations=df_reset['english_id'], featureidkey="id",
       z=df_reset['log_total_olim'],
-      colorscale=plotly_jet_scale,
+      colorscale='Amp', #trying amp
       zmin=log_min, zmax=log_max,
       marker_opacity=1.0,
       marker_line_width=1, marker_line_color='white',
       text=df_reset['hebrew_name'], customdata=df_reset['total_olim'],
       hovertemplate="<b>%{text}</b><br>סה\"כ עולים: %{customdata:,}<extra></extra>",
-      showscale=True,
+      showscale=True, #TODO to show the spectrum
       colorbar=dict(title="סקאלת עולים", orientation="h", y=-0.15, thickness=15),
       selectedpoints=selected_indices,
       selected=dict(marker=dict(opacity=1.0)),
