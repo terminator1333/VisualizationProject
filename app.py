@@ -210,7 +210,7 @@ if page == "דף הבית":
 
     col_hist_right, col_hist_left = st.columns([1, 1])
 
-    with col_hist_right:
+    with col_hist_left:
         if img_ship:
             st.image(img_ship, caption="ההתחלה: הגעה דרך הים (אוניית מעפילים היסטורית)", use_container_width=True)
         st.markdown("""
@@ -219,7 +219,7 @@ if page == "דף הבית":
         זהו סיפור על שיבה למולדת כנגד כל הסיכויים.
         """)
 
-    with col_hist_left:
+    with  col_hist_right:
         if img_plane_ethiopia:
             st.image(img_plane_ethiopia, caption="מבצע שלמה: הגעה ברכבת אווירית", use_container_width=True)
         st.markdown("""
