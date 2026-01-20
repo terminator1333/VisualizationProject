@@ -328,7 +328,7 @@ if page == "דף הבית":
 
         st.markdown(f"""
         <div class="metric-container">
-            <div class="metric-label"> שלוש המדינות עם הכי הרבה עולים</div>
+            <div class="metric-label"> שלושת המדינות עם הכי הרבה עולים</div>
             <div class="metric-value-list">
                 1. רוסיה (159,748)<br>
                 2. אוקראינה (58,888)<br>
