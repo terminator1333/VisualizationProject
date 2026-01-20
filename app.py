@@ -316,7 +316,7 @@ if page == "דף הבית":
         st.info(" **הצצה לנתונים**")
 
         # Mock Data Variables (Replace with your logic)
-        total_olim_heb = 360000     
+        total_olim_heb = 362157     
         top_country_heb = "רוסיה (159,748)"
         
         st.markdown(f"""
