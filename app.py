@@ -1053,14 +1053,22 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
 
     def deselect_all():
         st.session_state['country_selector'] = []
+    def select_top4():
+        st.session_state['country_selector'] = top_4_countries
 
     # --- Button Layout ---
-    col1, col2, col3 = st.columns([6, 1, 1])
+    # Changed columns to make room for the 3rd button
+    # [Spacer, Top 4, Select All, Deselect All]
+    col1, col2, col3, col4 = st.columns([5, 1.5, 1.5, 1.5]) 
+    
     with col1:
         st.empty() 
     with col2:
-        st.button("בחר הכל", on_click=select_all, use_container_width=True)
+        # NEW: Button for Top 4
+        st.button("4 המובילות", on_click=select_top4, use_container_width=True)
     with col3:
+        st.button("בחר הכל", on_click=select_all, use_container_width=True)
+    with col4:
         st.button("נקה בחירה", on_click=deselect_all, use_container_width=True)
 
     selected_countries = st.multiselect(
