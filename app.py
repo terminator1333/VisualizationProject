@@ -9,17 +9,12 @@ import matplotlib.cm as cm
 matplotlib.use('Agg') # to not open new window when using matplotlib
 import matplotlib.colors as mcolors
 import colorsys # Required for shading
+from PIL import Image
+import os
 
 # -------------------------
 # Page setup
 # -------------------------
-st.set_page_config(page_title="Israel Data Dashboard", page_icon="🇮🇱", layout="wide")
-
-# -------------------------
-# Navigation
-# -------------------------
-st.sidebar.title("ניווט")
-page = st.sidebar.radio("עבור אל", ["מגמות עלייה ממדינות מוצא", "מגמות קליטה לפי יישובים", "תחומי תעסוקה של עולים לפי מדינת מוצא"]) #all the pages
 
 # -------------------------
 # Configuration
@@ -33,10 +28,325 @@ PAGE2_PATH = "datasets/page2_final.csv"
 
 PAGE3_PATH = "datasets/page3_final.csv"
 
+PATH_SHIP = "pictures/exodus.png"
+PATH_PLANE_ETHIOPIA = "pictures/ethiopia.png"
+PATH_PLANE_MODERN = "pictures/current.png"
+
 # ==============================================================================
 # PAGE 1: IMMIGRATION TRENDS
 # ==============================================================================
-if page == "מגמות עלייה ממדינות מוצא":
+
+# 1. Page Config MUST be the very first command (Global)
+st.set_page_config(
+    page_title="ניתוח עלייה: 2015-2024",
+    page_icon="🇮🇱",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+st.markdown("""
+    <style>
+    /* --- GENERAL SETTINGS --- */
+    /* Keep the global layout LTR so the sidebar stays on the LEFT */
+    .stApp {
+        direction: ltr;
+    }
+
+    /* --- SIDEBAR STYLING --- */
+    /* Force the sidebar content to be RTL (for Hebrew text) and aligned right */
+    [data-testid="stSidebar"] {
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* HIDE the default Streamlit Navigation and Search Bar */
+    [data-testid="stSidebarNav"] {
+        display: none;
+    }
+
+    /* FIX RADIO BUTTONS */
+    /* Align the radio button container to the right */
+    .stRadio [role="radiogroup"] {
+        direction: rtl;
+        text-align: right;
+        justify-content: right;
+    }
+    /* Ensure the text labels in the radio buttons align correctly */
+    .stRadio div[data-testid="stMarkdownContainer"] p {
+        text-align: right;
+    }
+
+    /* --- MAIN CONTENT STYLING --- */
+    /* Force the main page content to be RTL */
+    .main .block-container {
+        direction: rtl;
+        text-align: right;
+    }
+
+    /* Headers and Text Alignment for Main Area */
+    h1, h2, h3, h4, h5, h6, p, div {
+        text-align: right;
+    }
+    
+    /* --- METRIC BOX STYLING --- */
+    .metric-container {
+        background-color: #f0f2f6;
+        border-radius: 5px;
+        padding: 15px;
+        border-right: 5px solid #0038b8;
+        color: rgb(49, 51, 63);
+        margin-bottom: 1rem;
+        direction: rtl; /* Ensure content inside box is RTL */
+    }
+    .metric-label {
+        font-size: 14px;
+        margin-bottom: 5px;
+        color: #555;
+        text-align: right;
+    }
+    .metric-value-large {
+        font-size: 2rem;
+        font-weight: 600;
+        color: #000;
+        text-align: right;
+    }
+    .metric-value-list {
+        font-size: 1.1rem;
+        font-weight: 500;
+        line-height: 1.6;
+        color: #000;
+        text-align: right;
+    }
+
+    /* Custom Page Headers */
+    .main-header {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 3.5rem;
+        color: #0038b8;
+        text-align: center; /* Titles look better centered usually, change to right if preferred */
+        font-weight: 800;
+        text-shadow: 1px 1px 2px #abb7c4;
+    }
+    .sub-header {
+        font-size: 1.8rem;
+        color: #555;
+        text-align: center;
+        margin-bottom: 40px;
+        font-weight: 300;
+    }
+    .section-title {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #0038b8;
+        border-bottom: 3px solid #0038b8;
+        padding-bottom: 15px;
+        margin-top: 50px;
+        margin-bottom: 30px;
+        text-align: right;
+    }
+    /* --- PROCESS CARD STYLING (For "What We Did") --- */
+    .process-card {
+        background-color: #ffffff;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border-right: 4px solid #0038b8; /* Israel Blue Accent */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Subtle shadow */
+        transition: transform 0.2s; /* Smooth animation on hover */
+    }
+    .process-card:hover {
+        transform: translateY(-2px); /* Moves up slightly when hovered */
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .process-title {
+        color: #0038b8;
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-bottom: 8px;
+        display: block;
+    }
+    .process-text {
+        font-size: 0.95rem;
+        color: #555;
+        line-height: 1.5;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+
+# 3. Sidebar Navigation (Custom Radio)
+# We use st.sidebar.title to give it a header above the radio buttons
+st.sidebar.title("תפריט ראשי")
+
+page = st.sidebar.radio(
+    "עבור אל", 
+    ["דף הבית", "מגמות עלייה ממדינות מוצא", "מגמות קליטה לפי יישובים", "תחומי תעסוקה של עולים לפי מדינת מוצא"],
+    label_visibility="collapsed",
+    key="main_navigation_radio" # <--- This unique key prevents the error
+)
+
+if page == "דף הבית":
+    
+    # Function to safely load images
+    def load_image(path):
+        if os.path.exists(path):
+            return Image.open(path)
+        return None
+
+    # Image Paths
+    
+
+    img_ship = load_image(PATH_SHIP)
+    img_plane_ethiopia = load_image(PATH_PLANE_ETHIOPIA)
+    img_plane_modern = load_image(PATH_PLANE_MODERN)
+
+    # --- Header ---
+    st.markdown('<div class="main-header">המסע הביתה</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">ניתוח נתונים ומגמות עלייה לישראל (2015 - 2024)</div>', unsafe_allow_html=True)
+    st.divider()
+
+    # --- Historical Section ---
+    st.markdown('<div class="section-title">מורשת היסטורית</div>', unsafe_allow_html=True)
+
+    col_hist_right, col_hist_left = st.columns([1, 1])
+
+    with col_hist_right:
+        if img_ship:
+            st.image(img_ship, caption="ההתחלה: הגעה דרך הים (אוניית מעפילים היסטורית)", use_container_width=True)
+        st.markdown("""
+        מאז הקמת המדינה, העלייה היא ליבה הפועם של ישראל. 
+        מאוניות המעפילים החשאיות של שנות ה-40, דרך גלי העלייה הגדולים מאירופה וארצות ערב.
+        זהו סיפור על שיבה למולדת כנגד כל הסיכויים.
+        """)
+
+    with col_hist_left:
+        if img_plane_ethiopia:
+            st.image(img_plane_ethiopia, caption="מבצע שלמה: הגעה ברכבת אווירית", use_container_width=True)
+        st.markdown("""
+        בשנות ה-80 וה-90, התבצעו מבצעים אוויריים נועזים להעלאת יהודי אתיופיה וברית המועצות לשעבר.
+        תמונות אלו הן עדות למחויבות המתמשכת של מדינת ישראל לקיבוץ גלויות.
+        """)
+
+    # --- Modern Era Section ---
+    st.markdown('<div class="section-title">הפרק הנוכחי: העידן המודרני (2015-2024)</div>', unsafe_allow_html=True)
+
+    col_mod_right, col_mod_left = st.columns([2, 3])
+
+    with col_mod_right:
+        if img_plane_modern:
+            st.image(img_plane_modern, caption="עלייה מודרנית: עולים חדשים מרוסיה נוחתים בישראל", use_container_width=True)
+
+    with col_mod_left:
+        st.markdown("""
+        <div class="text-content" style="margin-top: 20px; direction: rtl;">
+        הפרויקט שלנו מתמקד בעשור האחרון. <b>אמנם הנסיבות והאתגרים השתנו, אך הסיפור האנושי נשאר דומה.</b>
+        <br><br>
+        בשנים <b>2015-2024</b>, ישראל חוותה גלי עלייה משמעותיים המושפעים מאירועים גיאופוליטיים דרמטיים:
+        המלחמה באוקראינה, התגברות האנטישמיות בעולם (במיוחד לאחר ה-7/10), ושינויים כלכליים גלובליים.
+        <br><br>
+        התמונה מימין מדגימה את העלייה העכשווית, הנמשכת בעוצמה גם בימים אלו, ומהווה עדות חיה לכך שסיפור עליית יהודי העולם ארצה רחוק מלהסתיים.
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.divider()
+
+    # --- What We Did & Metrics ---
+    st.markdown('<div class="section-title">תהליך המחקר והפיתוח</div>', unsafe_allow_html=True)
+
+    c_cards_right, c_stats_left = st.columns([2, 1])
+
+    with c_cards_right:
+        st.markdown("""
+        <div class="text-content" style="margin-bottom: 25px;">
+        במסגרת הפרויקט, יצרנו מערכת אנליטית הבוחנת את מגמות העלייה לעומק.
+        במקום להסתפק בסיכומים שנתיים, פירקנו את הנתונים לפי שלושה צירי מחקר עיקריים
+        </div>
+        """, unsafe_allow_html=True)
+
+        grid_r1_c1, grid_r1_c2 = st.columns(2)
+        grid_r2_c1, grid_r2_c2 = st.columns(2)
+
+        # Card 1: The Technical Base
+        with grid_r1_c1:
+            st.markdown("""
+            <div class="process-card">
+                <span class="process-title">מגמות גלובליות</span>
+                <span class="process-text">
+                ניתוח עומק של מדינות המוצא מהן מגיעים העולים, זיהוי גלי הגירה ושינויים דמוגרפיים על ציר הזמן
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Card 2: Matches "מגמות עלייה ממדינות מוצא"
+        with grid_r1_c2:
+            st.markdown("""
+            <div class="process-card">
+                <span class="process-title">הנדסת נתונים</span>
+                <span class="process-text">
+                איסוף ואיחוד של רשומות עלייה גולמיות ממסדי נתונים ממשלתיים, ניקוי המידע ובניית דאטהסטים אחידים
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Card 3: Matches "מגמות קליטה לפי יישובים"
+        with grid_r2_c1:
+            st.markdown("""
+            <div class="process-card">
+                <span class="process-title">ניתוח קליטה ביישובים</span>
+                <span class="process-text">
+                מיפוי הערים הקולטות המובילות בישראל והבנת העדפות המגורים של עולים
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Card 4: Matches "תחומי תעסוקה..."
+        with grid_r2_c2:
+            st.markdown("""
+            <div class="process-card">
+                <span class="process-title">הון אנושי ותעסוקה</span>
+                <span class="process-text">
+                פילוח מקצועי של העולים לפי מדינות מוצא – איתור מגמות בתחומי ההייטק, הרפואה, ההנדסה והמקצועות החופשיים
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+
+    # 7. Metrics Section (Existing code, kept consistent)
+    with c_stats_left:
+        st.info(" **הצצה לנתונים**")
+
+        # Mock Data Variables (Replace with your logic)
+        total_olim_heb = 360000     
+        top_country_heb = "רוסיה (159,748)"
+        
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-label">סה"כ עולים שנותחו (2015-2024)</div>
+            <div class="metric-value-large">{total_olim_heb:,}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-label">מדינת המוצא המובילה</div>
+            <div class="metric-value-large" style="font-size: 1.5rem;">{top_country_heb}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="metric-container">
+            <div class="metric-label">3 הערים עם הכי הרבה עולים</div>
+            <div class="metric-value-list">
+                1. תל אביב (44,406)<br>
+                2. נתניה (38,607)<br>
+                3. חיפה (36,264)
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+
+elif page == "מגמות עלייה ממדינות מוצא":
 
     col_header_1, col_header_2 = st.columns([4, 1])
     with col_header_1:
@@ -639,7 +949,7 @@ elif page == "מגמות קליטה לפי יישובים":
       text=df_reset['hebrew_name'], customdata=df_reset['total_olim'],
       hovertemplate="<b>%{text}</b><br>סה\"כ עולים: %{customdata:,}<extra></extra>",
       showscale=True,
-      colorbar=dict(title="סקאלת עולים (לוגריתמי)", orientation="h", y=-0.15, thickness=15),
+      colorbar=dict(title="סקאלת עולים", orientation="h", y=-0.15, thickness=15),
       selectedpoints=selected_indices,
       selected=dict(marker=dict(opacity=1.0)),
       unselected=dict(marker=dict(opacity=0.4))
