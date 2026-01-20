@@ -328,14 +328,18 @@ if page == "דף הבית":
 
         st.markdown(f"""
         <div class="metric-container">
-            <div class="metric-label">מדינת המוצא המובילה</div>
-            <div class="metric-value-large" style="font-size: 1.5rem;">{top_country_heb}</div>
+            <div class="metric-label"> שלוש המדינות עם הכי הרבה עולים</div>
+            <div class="metric-value-list">
+                1. רוסיה (159,748)<br>
+                2. אוקראינה (58,888)<br>
+                3. צרפת (33,011)
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <div class="metric-container">
-            <div class="metric-label">3 הערים עם הכי הרבה עולים</div>
+            <div class="metric-label">שלושת הערים עם הכי הרבה עולים</div>
             <div class="metric-value-list">
                 1. תל אביב (44,406)<br>
                 2. נתניה (38,607)<br>
