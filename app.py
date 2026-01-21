@@ -826,13 +826,13 @@ elif page == "מגמות קליטה לפי יישובים":
   
   log_min, log_max = df_profile['log_total_olim'].min(), df_profile['log_total_olim'].max()
 
-  def get_amp_color(value, vmin, vmax, opacity=1.0):
+  def get_dense_color(value, vmin, vmax, opacity=1.0):
       # 1. Normalize the value (0 to 1)
       norm_val = (value - vmin) / (vmax - vmin) if vmax > vmin else 0.5
       
       # 2. Sample the "Amp" scale at this normalized point
       # sample_colorscale returns a list of strings, we take the first one
-      color_string = sample_colorscale("Amp", [norm_val])[0]
+      color_string = sample_colorscale("dense", [norm_val])[0]
       
       # 3. Convert to RGBA to handle opacity
       # Plotly usually returns 'rgb(r, g, b)' or hex. We handle both.
@@ -866,14 +866,14 @@ elif page == "מגמות קליטה לפי יישובים":
       is_selected = (eid in current_selection) or is_all_mode
 
       if is_all_mode:
-          # CHANGE HERE: Use get_amp_color instead of get_mpl_color
-          line_color = get_amp_color(row['log_total_olim'], log_min, log_max, opacity=0.35)
+          # CHANGE HERE: Use get_dense_color instead of get_mpl_color
+          line_color = get_dense_color(row['log_total_olim'], log_min, log_max, opacity=0.35)
           line_width = 1.5; hover_info = 'text'
           htemplate = f"<b>{row['hebrew_name']}</b><br>מדד: {row['madad']:.2f}<br>עולים: {int(row['total_olim']):,}<extra></extra>"
       else:
           if is_selected:
-              # CHANGE HERE: Use get_amp_color instead of get_mpl_color
-              line_color = get_amp_color(row['log_total_olim'], log_min, log_max, opacity=1.0)
+              # CHANGE HERE: Use get_dense_color instead of get_mpl_color
+              line_color = get_dense_color(row['log_total_olim'], log_min, log_max, opacity=1.0)
               line_width = 4.0; hover_info = 'text'
               htemplate = f"<b>{row['hebrew_name']}</b><br>מדד: {row['madad']:.2f}<br>עולים: {int(row['total_olim']):,}<extra></extra>"
           else:
@@ -933,7 +933,7 @@ elif page == "מגמות קליטה לפי יישובים":
   fig_map = go.Figure(go.Choroplethmapbox( 
       geojson=cities_geojson, locations=df_reset['english_id'], featureidkey="id",
       z=df_reset['log_total_olim'],
-      colorscale='Amp', #trying amp
+      colorscale='dense', #trying dense
       zmin=log_min, zmax=log_max,
       marker_opacity=1.0,
       marker_line_width=1, marker_line_color='white',
