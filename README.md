@@ -73,6 +73,11 @@ A bit on each file:
         page3_final.csv -> the csv file needed for the 3rd page
         israel_map.geojson -> geojson file to process and display different districts (yeshuvim) in Israel
 
+    pictures/
+         current.png -> an image showing a recent aliyah from Russia due to the Ukraine-Russia war
+         ethiopia.png -> an image showing operation solomon where 15,000 Jewish Ethiopians were rescued from Ethiopia due to social unrest
+         exodus.png -> an image showing the exodus ship which was used in 1947 to help jewish refugees immigrate to Israel. The ship was refused entry by the British mandate and sent back to the shores of France. 
+
         
     preprocessing/
         GDP_and_population_preprocessing.ipynb -> for preprocessing external GDP and population datasets
@@ -80,6 +85,7 @@ A bit on each file:
         create_israeli_map_and_yeshuvim.ipynb -> creating the geojson file
         isr_pop.ipynb -> for preprocessing populations of different yeshuvim (districts)
         visualization_preprocessing.ipynb -> initial preprocessing of raw immigration data
+        olim_2015-2024_preprocessed.zip -> a compressed csv file of the initial preprocessing, showing individual records of immigrants to Israel
 
 -------------------------------------
 
