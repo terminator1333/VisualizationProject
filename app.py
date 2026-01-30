@@ -33,6 +33,7 @@ PATH_SHIP = "pictures/exodus.png"
 PATH_PLANE_ETHIOPIA = "pictures/ethiopia.png"
 PATH_PLANE_MODERN = "pictures/current.png"
 
+
 # ==============================================================================
 # PAGE 1: IMMIGRATION TRENDS
 # ==============================================================================
@@ -194,6 +195,8 @@ if page == "דף הבית":
             return Image.open(path)
         return None
 
+    # Image Paths
+    
 
     img_ship = load_image(PATH_SHIP)
     img_plane_ethiopia = load_image(PATH_PLANE_ETHIOPIA)
@@ -315,7 +318,7 @@ if page == "דף הבית":
         st.info(" **הצצה לנתונים**")
 
         # Mock Data Variables (Replace with your logic)
-        total_olim_heb = 360000     
+        total_olim_heb = 362157     
         top_country_heb = "רוסיה (159,748)"
         
         st.markdown(f"""
@@ -325,16 +328,20 @@ if page == "דף הבית":
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown(f"""
+        st.markdown("""
         <div class="metric-container">
-            <div class="metric-label">מדינת המוצא המובילה</div>
-            <div class="metric-value-large" style="font-size: 1.5rem;">{top_country_heb}</div>
+            <div class="metric-label">שלושת המדינות עם הכי הרבה עולים</div>
+            <div class="metric-value-list">
+                1. רוסיה (159,748)<br>
+                2. אוקראינה (57,888)<br>
+                3. צרפת (33,011)
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <div class="metric-container">
-            <div class="metric-label">3 הערים עם הכי הרבה עולים</div>
+            <div class="metric-label">שלושת הערים עם הכי הרבה עולים</div>
             <div class="metric-value-list">
                 1. תל אביב (44,406)<br>
                 2. נתניה (38,607)<br>
@@ -826,7 +833,7 @@ elif page == "מגמות קליטה לפי יישובים":
   
   log_min, log_max = df_profile['log_total_olim'].min(), df_profile['log_total_olim'].max()
 
-  def get_dense_color(value, vmin, vmax, opacity=1.0):
+  def get_amp_color(value, vmin, vmax, opacity=1.0):
       # 1. Normalize the value (0 to 1)
       norm_val = (value - vmin) / (vmax - vmin) if vmax > vmin else 0.5
       
@@ -866,16 +873,30 @@ elif page == "מגמות קליטה לפי יישובים":
       is_selected = (eid in current_selection) or is_all_mode
 
       if is_all_mode:
-          # CHANGE HERE: Use get_dense_color instead of get_mpl_color
-          line_color = get_dense_color(row['log_total_olim'], log_min, log_max, opacity=0.35)
+          # CHANGE HERE: Use get_amp_color instead of get_mpl_color
+          line_color = get_amp_color(row['log_total_olim'], log_min, log_max, opacity=0.35)
           line_width = 1.5; hover_info = 'text'
-          htemplate = f"<b>{row['hebrew_name']}</b><br>מדד: {row['madad']:.2f}<br>עולים: {int(row['total_olim']):,}<extra></extra>"
+          htemplate = (
+          f"<b>{row['hebrew_name']}</b><br>"
+          f"סה\"כ עולים: {int(row['total_olim']):,}<br>"
+          f"גיל ממוצע: {row['avg_age']:.1f}<br>"
+          f"מדד: {row['madad']:.2f}<br>"
+          f"תעסוקה: {row['pct_employed']:.1f}%<br>"
+          f"נשים: {row['pct_female']:.1f}%"
+          "<extra></extra>") # Hides the secondary trace name box
       else:
           if is_selected:
-              # CHANGE HERE: Use get_dense_color instead of get_mpl_color
-              line_color = get_dense_color(row['log_total_olim'], log_min, log_max, opacity=1.0)
+              # CHANGE HERE: Use get_amp_color instead of get_mpl_color
+              line_color = get_amp_color(row['log_total_olim'], log_min, log_max, opacity=1.0)
               line_width = 4.0; hover_info = 'text'
-              htemplate = f"<b>{row['hebrew_name']}</b><br>מדד: {row['madad']:.2f}<br>עולים: {int(row['total_olim']):,}<extra></extra>"
+              htemplate = (
+          f"<b>{row['hebrew_name']}</b><br>"
+          f"סה\"כ עולים: {int(row['total_olim']):,}<br>"
+          f"גיל ממוצע: {row['avg_age']:.1f}<br>"
+          f"מדד: {row['madad']:.2f}<br>"
+          f"תעסוקה: {row['pct_employed']:.1f}%<br>"
+          f"נשים: {row['pct_female']:.1f}%"
+          "<extra></extra>")
           else:
               line_color = 'rgba(200, 200, 200, 0.05)'; line_width = 1.0; hover_info = 'skip'; htemplate = None
 
@@ -916,7 +937,7 @@ elif page == "מגמות קליטה לפי יישובים":
 
   fig_lines = go.Figure(data=traces)
   fig_lines.update_layout(
-      title="השוואת מדדים (ניתן ללחוץ על קו לבחירה)",
+      title="השוואת מדדים דמוגרפיים לפי יישובים",
       xaxis=dict(showgrid=False, showticklabels=False, range=[-0.2, len(features)-0.5]),
       yaxis=dict(showgrid=False, showticklabels=False, range=[-0.1, 1.15]),
       margin=dict(l=20, r=20, b=20, t=60), height=500, hovermode='closest', annotations=annotations, shapes=shapes, plot_bgcolor='white', dragmode=False
@@ -933,7 +954,7 @@ elif page == "מגמות קליטה לפי יישובים":
   fig_map = go.Figure(go.Choroplethmapbox( 
       geojson=cities_geojson, locations=df_reset['english_id'], featureidkey="id",
       z=df_reset['log_total_olim'],
-      colorscale='dense', #trying dense
+      colorscale='dense', #trying amp
       zmin=log_min, zmax=log_max,
       marker_opacity=1.0,
       marker_line_width=1, marker_line_color='white',
@@ -1053,6 +1074,7 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
 
     def deselect_all():
         st.session_state['country_selector'] = []
+    
     def select_top4():
         st.session_state['country_selector'] = top_4_countries
 
@@ -1089,10 +1111,6 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
     unique_subjects = flows['subject'].unique().tolist()
     all_labels = unique_countries + unique_subjects
 
-    # Formatted Labels
-    styled_labels = []
-    for label in all_labels:
-        styled_labels.append(f"<span style='background-color:rgba(255,255,255,0.8); color:black;'><b>{label}</b></span>")
 
     label_map = {label: i for i, label in enumerate(all_labels)}
 
@@ -1125,22 +1143,30 @@ elif page == "תחומי תעסוקה של עולים לפי מדינת מוצא
 
     # 6. Create Plot
     fig = go.Figure(data=[go.Sankey(
+        # CHANGE: 'textfont' goes here, strictly outside of 'node'
+        textfont=dict(
+            color="black",
+            size=14,
+            family="Arial, sans-serif"
+        ),
+        
         node=dict(
             pad=20,
             thickness=30,
             line=dict(color="black", width=0.5),
-            label=styled_labels,
+            label=all_labels, 
             color=node_colors,
-            # Node Hover: Added <span style='color:black'> to force the number to match the text
+            # 'textfont' removed from here
+            
             hovertemplate='<b>%{label}</b><br>כמות: <span style="color:black"><b>%{value:,.0f}</b></span><extra></extra>',
             align='right' 
         ),
+        
         link=dict(
             source=source_indices,
             target=target_indices,
             value=values,
             color=link_colors,
-            # Link Hover: Added <span style='color:black'> to force the number to match the text
             hovertemplate=(
                 'מדינת מוצא: <b>%{source.label}</b>' + 
                 '<br>' + 
