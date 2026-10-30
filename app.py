@@ -949,54 +949,52 @@ elif page == "מגמות קליטה לפי יישובים":
   df_reset = df_profile.reset_index(drop=True)
   selected_indices = None
   if not is_all_mode:
-      selected_indices = df_reset.index[df_reset['english_id'].isin(current_selection)].tolist()
+    selected_indices = df_reset.index[df_reset['english_id'].isin(current_selection)].tolist()
 
-  fig_map = go.Figure(go.Choroplethmapbox( 
-      geojson=cities_geojson, locations=df_reset['english_id'], featureidkey="id",
-      z=df_reset['log_total_olim'],
-      colorscale='dense', #trying amp
-      zmin=log_min, zmax=log_max,
-      marker_opacity=1.0,
-      marker_line_width=1, marker_line_color='white',
-      text=df_reset['hebrew_name'], customdata=df_reset['total_olim'],
-      hovertemplate="<b>%{text}</b><br>סה\"כ עולים: %{customdata:,}<extra></extra>",
-      showscale=True, #TODO to show the spectrum
-      colorbar=dict(title="סקאלת עולים", orientation="h", y=-0.15, thickness=15),
-      selectedpoints=selected_indices,
-      selected=dict(marker=dict(opacity=1.0)),
-      unselected=dict(marker=dict(opacity=0.4))
+  fig_map = go.Figure(go.Choroplethmap( 
+    geojson=cities_geojson, locations=df_reset['english_id'], featureidkey="id",
+    z=df_reset['log_total_olim'],
+    colorscale='dense', #trying amp
+    zmin=log_min, zmax=log_max,
+    marker_opacity=1.0,
+    marker_line_width=1, marker_line_color='white',
+    text=df_reset['hebrew_name'], customdata=df_reset['total_olim'],
+    hovertemplate="<b>%{text}</b><br>סה\"כ עולים: %{customdata:,}<extra></extra>",
+    showscale=True, #TODO to show the spectrum
+    colorbar=dict(title="סקאלת עולים", orientation="h", y=-0.15, thickness=15),
+    selectedpoints=selected_indices,
+    selected=dict(marker=dict(opacity=1.0)),
+    unselected=dict(marker=dict(opacity=0.4))
   ))
 
   fig_map.update_layout(
-      mapbox_style="carto-positron",
-      # Use Dynamic View State
-      mapbox_center={"lat": st.session_state.map_view["lat"], "lon": st.session_state.map_view["lon"]},
-      mapbox_zoom=st.session_state.map_view["zoom"],
-      margin={"r":0,"t":30,"l":0,"b":0}, height=500, clickmode='event+select', title="מפת עולים"
+    map_style="carto-positron",
+    # Use Dynamic View State
+    map_center={"lat": st.session_state.map_view["lat"], "lon": st.session_state.map_view["lon"]},
+    map_zoom=st.session_state.map_view["zoom"],
+    margin={"r":0,"t":30,"l":0,"b":0}, height=500, clickmode='event+select', title="מפת עולים"
   )
 
   # DISPLAY
   c1, c2 = st.columns([1.5, 1])
   with c1:
-      st.plotly_chart(fig_lines, use_container_width=True, on_select="rerun", key="line_plot", selection_mode="points")
+    st.plotly_chart(fig_lines, use_container_width=True, on_select="rerun", key="line_plot", selection_mode="points")
   with c2:
-      # --- 4 ZOOM BUTTONS ---
-      b1, b2, b3, b4 = st.columns(4)
-      with b1:
-
-          st.button("דרום", on_click=set_view, args=(30.2, 35.1, 6.7), use_container_width=True)
-      with b2:
-          # North: Zoomed OUT from 8.5 -> 7.8
-          st.button("מרכז", on_click=set_view, args=(31.95, 35.05, 8.2), use_container_width=True)
-      with b3:
-          # Center: Zoomed OUT and shifted LEFT (West)
-          st.button("צפון", on_click=set_view, args=(32.9, 35.3, 7.8), use_container_width=True)
-      with b4:
-          # South: Zoomed OUT A LOT and shifted RIGHT (East)
-          st.button("כל ישראל", on_click=set_view, args=(31.4, 35.0, 5.8), use_container_width=True)
-
-      st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", key="map_plot", selection_mode="points")
-
+    # --- 4 ZOOM BUTTONS ---
+    b1, b2, b3, b4 = st.columns(4)
+    with b1:
+      st.button("דרום", on_click=set_view, args=(30.2, 35.1, 6.7), use_container_width=True)
+    with b2:
+      # North: Zoomed OUT from 8.5 -> 7.8
+      st.button("מרכז", on_click=set_view, args=(31.95, 35.05, 8.2), use_container_width=True)
+    with b3:
+      # Center: Zoomed OUT and shifted LEFT (West)
+      st.button("צפון", on_click=set_view, args=(32.9, 35.3, 7.8), use_container_width=True)
+    with b4:
+      # South: Zoomed OUT A LOT and shifted RIGHT (East)
+      st.button("כל ישראל", on_click=set_view, args=(31.4, 35.0, 5.8), use_container_width=True)
+  
+    st.plotly_chart(fig_map, use_container_width=True, on_select="rerun", key="map_plot", selection_mode="points")
   # ==============================================================================
   # 8. DYNAMIC DATA TABLE
   # ==============================================================================
